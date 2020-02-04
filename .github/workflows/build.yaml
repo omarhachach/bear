@@ -1,0 +1,35 @@
+name: Build and Test
+
+on:
+  pull_request:
+    branches:
+      - '**'
+  push:
+    branches:
+      - 'master'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        go: [ '1.11.x', '1.12.x', '1.13.x' ]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Go version
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: Test
+        run: |
+          go test ./...
+
+      - name: Build
+        run: |
+          cd cmd/rexsdev
+          go build .
