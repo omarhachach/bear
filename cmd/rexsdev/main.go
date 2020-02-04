@@ -38,7 +38,7 @@ func main() {
 	signal.Notify(c, os.Interrupt, os.Kill)
 	b := bear.New(&bear.Config{
 		Debug: true,
-		DiscordToken: "Njc0MzYyODMwMzQ2MjU2Mzk1.Xjnfuw._YPTjwMgqbLJdfxM0BYrb0uukSE",
+		DiscordToken: "your-token-goes-here",
 	}).RegisterModules(&Module{}).Start()
 
 	<-c
