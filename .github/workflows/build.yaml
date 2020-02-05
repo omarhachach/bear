@@ -31,5 +31,5 @@ jobs:
 
       - name: Build
         run: |
-          cd cmd/rexsdev
+          cd cmd/bear
           go build .
