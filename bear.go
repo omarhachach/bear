@@ -2,9 +2,11 @@ package bear
 
 import (
 	"fmt"
+	"os"
+	"sync"
+
 	"github.com/bwmarrin/discordgo"
 	"github.com/sirupsen/logrus"
-	"sync"
 )
 
 // Bear is the core bot.
@@ -15,6 +17,7 @@ type Bear struct {
 	Log      *logrus.Logger
 	Config   *Config
 	mutex    *sync.Mutex
+	logFile  *os.File
 }
 
 // New returns a new Bear.
@@ -22,13 +25,36 @@ func New(config *Config) *Bear {
 	b := &Bear{
 		Commands: make(map[string]Command),
 		Modules:  make(map[string]Module),
-		Config:   config,
 		Log:      logrus.New(),
 		mutex:    &sync.Mutex{},
+		logFile:  nil,
 	}
 
-	if b.Config.Debug {
+	return b.UpdateConfig(config)
+}
+
+// UpdateConfig will update the configuration of the bot.
+func (b *Bear) UpdateConfig(config *Config) *Bear {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
+	b.Config = config
+
+	if b.Config.Log.Debug {
 		b.Log.SetLevel(logrus.DebugLevel)
+		b.Log.SetReportCaller(true)
+	}
+
+	if b.Config.Log.File == "" {
+		b.Log.SetOutput(os.Stdout)
+	} else {
+		file, err := os.OpenFile(b.Config.Log.File, os.O_RDWR|os.O_CREATE, 0644)
+		if err != nil {
+			b.Log.WithError(err).Error("Error opening log file, not changing log location.")
+		} else {
+			b.logFile = file
+			b.Log.SetOutput(file)
+		}
 	}
 
 	return b
@@ -121,6 +147,13 @@ func (b *Bear) Close() *Bear {
 	err := b.Session.Close()
 	if err != nil {
 		b.Log.WithError(err).Error("Error closing Discord session.")
+	}
+
+	if b.logFile != nil {
+		err = b.logFile.Close()
+		if err != nil {
+			b.Log.WithError(err).Error("Error closing log file.")
+		}
 	}
 
 	b.Log.Info("The bear is now asleep.")

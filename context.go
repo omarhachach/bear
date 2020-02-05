@@ -2,6 +2,7 @@ package bear
 
 import (
 	"fmt"
+
 	"github.com/bwmarrin/discordgo"
 	"github.com/sirupsen/logrus"
 )

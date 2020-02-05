@@ -1,8 +1,9 @@
 package bear
 
 import (
-	"github.com/bwmarrin/discordgo"
 	"strings"
+
+	"github.com/bwmarrin/discordgo"
 )
 
 func onMessageCreate(b *Bear) func(*discordgo.Session, *discordgo.MessageCreate) {

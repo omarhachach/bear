@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/omarhachach/bear"
 	"os"
 	"os/signal"
+
+	"github.com/omarhachach/bear"
 )
 
 type Module struct {
@@ -35,10 +36,13 @@ func (m *Module) Init(*bear.Bear) {
 
 func main() {
 	c := make(chan os.Signal, 1)
-	
+
 	signal.Notify(c, os.Interrupt, os.Kill)
 	b := bear.New(&bear.Config{
-		Debug: true,
+		Log: &bear.LogConfig{
+			Debug: true,
+			File:  "./debug.log",
+		},
 		DiscordToken: "your-token-goes-here",
 	}).RegisterModules(&Module{}).Start()
 
