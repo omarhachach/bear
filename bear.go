@@ -99,7 +99,7 @@ func (b *Bear) RegisterCommands(cmds []Command) *Bear {
 	return b
 }
 
-// RegisterCommand will check if a command exists, and add it to the bopt.
+// RegisterCommand will check if a command exists, and add it to the bot.
 func (b *Bear) RegisterCommand(cmd Command) *Bear {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
