@@ -10,7 +10,7 @@ import (
 )
 
 // Version is the current version of Bear.
-var Version = "0.2.0-alpha"
+var Version = "0.3.1-alpha"
 
 // Bear is the core bot.
 type Bear struct {
@@ -165,6 +165,9 @@ func (b *Bear) Close() *Bear {
 			b.Log.WithError(err).Error("Error closing log file.")
 		}
 	}
+
+	b.Log.Debug("Closing all modules.")
+	b.closeModules()
 
 	b.Log.Info("The bear is now asleep.")
 	return b

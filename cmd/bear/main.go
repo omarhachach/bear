@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"os/signal"
+	"syscall"
 
 	"github.com/omarhachach/bear"
 )
@@ -41,7 +42,7 @@ func (m *Module) Close(*bear.Bear) {
 func main() {
 	c := make(chan os.Signal, 1)
 
-	signal.Notify(c, os.Interrupt, os.Kill)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	b := bear.New(&bear.Config{
 		Log: &bear.LogConfig{
 			Debug: true,
