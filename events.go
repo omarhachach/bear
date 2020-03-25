@@ -18,7 +18,7 @@ func onMessageCreate(b *Bear) func(*discordgo.Session, *discordgo.MessageCreate)
 		msg := m.ContentWithMentionsReplaced()
 		caller := strings.Split(msg, " ")[0]
 
-		cmd := b.Commands[b.Config.CommandPrefix + caller]
+		cmd := b.Commands[caller]
 		if cmd == nil {
 			return
 		}
