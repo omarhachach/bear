@@ -34,6 +34,10 @@ func (m *Module) Init(*bear.Bear) {
 	return
 }
 
+func (m *Module) Close(*bear.Bear) {
+	return
+}
+
 func main() {
 	c := make(chan os.Signal, 1)
 
@@ -41,7 +45,7 @@ func main() {
 	b := bear.New(&bear.Config{
 		Log: &bear.LogConfig{
 			Debug: true,
-			File:  "./debug.log",
+			File:  "",
 		},
 		DiscordToken: "your-token-goes-here",
 	}).RegisterModules(&Module{}).Start()

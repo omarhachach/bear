@@ -7,4 +7,5 @@ type Module interface {
 	GetCommands() []Command
 	GetVersion() string
 	Init(*Bear)
+	Close(*Bear)
 }

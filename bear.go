@@ -9,6 +9,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Version is the current version of Bear.
+var Version = "0.2.0-alpha"
+
 // Bear is the core bot.
 type Bear struct {
 	Commands map[string]Command
@@ -16,6 +19,7 @@ type Bear struct {
 	Session  *discordgo.Session
 	Log      *logrus.Logger
 	Config   *Config
+	Version  string
 	mutex    *sync.Mutex
 	logFile  *os.File
 }
@@ -28,6 +32,7 @@ func New(config *Config) *Bear {
 		Log:      logrus.New(),
 		mutex:    &sync.Mutex{},
 		logFile:  nil,
+		Version:  Version,
 	}
 
 	return b.UpdateConfig(config)
@@ -47,14 +52,15 @@ func (b *Bear) UpdateConfig(config *Config) *Bear {
 
 	if b.Config.Log.File == "" {
 		b.Log.SetOutput(os.Stdout)
+		return b
+	}
+
+	file, err := os.OpenFile(b.Config.Log.File, os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		b.Log.WithError(err).Error("Error opening log file, not changing log location.")
 	} else {
-		file, err := os.OpenFile(b.Config.Log.File, os.O_RDWR|os.O_CREATE, 0644)
-		if err != nil {
-			b.Log.WithError(err).Error("Error opening log file, not changing log location.")
-		} else {
-			b.logFile = file
-			b.Log.SetOutput(file)
-		}
+		b.logFile = file
+		b.Log.SetOutput(file)
 	}
 
 	return b
@@ -119,11 +125,11 @@ func (b *Bear) RegisterCommand(cmd Command) *Bear {
 	return b
 }
 
-func (b *Bear) initModules() {
-	for _, module := range b.Modules {
-		module.Init(b)
-		b.Log.Debugf("Initialized module: %s.", module.GetName())
-	}
+// AddHandler will add a handler to the Discord session
+func (b *Bear) AddHandler(handler interface{}) *Bear {
+	b.Log.Debug("Added event handler to the session")
+	b.Session.AddHandler(handler)
+	return b
 }
 
 // Start will open the Discord session, and initialize the bot.
@@ -135,12 +141,16 @@ func (b *Bear) Start() *Bear {
 	}
 
 	b.Session = session
-	b.Session.AddHandler(onMessageCreate(b))
+	b.AddHandler(onMessageCreate(b))
+
+	b.Log.Info("Initing modules.")
+	b.initModules()
 
 	b.Log.Info("You have poked the bear!")
 	return b
 }
 
+// CLose will close all the sessions properly.
 func (b *Bear) Close() *Bear {
 	b.Log.Info("The bear is sleepy.")
 
@@ -172,4 +182,18 @@ func initDiscordSession(token string) (*discordgo.Session, error) {
 	}
 
 	return session, nil
+}
+
+func (b *Bear) initModules() {
+	for _, module := range b.Modules {
+		module.Init(b)
+		b.Log.Debugf("Initialized module: %s", module.GetName())
+	}
+}
+
+func (b *Bear) closeModules() {
+	for _, module := range b.Modules {
+		module.Init(b)
+		b.Log.Debugf("Closed module: %s", module.GetName())
+	}
 }

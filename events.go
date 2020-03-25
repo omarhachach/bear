@@ -13,6 +13,8 @@ func onMessageCreate(b *Bear) func(*discordgo.Session, *discordgo.MessageCreate)
 			return
 		}
 
+		b.Log.Debugf("Got message %#v.", m.Message)
+
 		msg := m.ContentWithMentionsReplaced()
 		caller := strings.Split(msg, " ")[0]
 
