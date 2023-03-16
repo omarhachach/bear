@@ -13,23 +13,19 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        go: [ '1.11.x', '1.12.x', '1.13.x' ]
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Set up Go version
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v4
         with:
-          go-version: ${{ matrix.go }}
+          go-version-file: go.mod
 
       - name: Test
         run: |
           go test ./...
 
       - name: Build
-        run: |
-          cd cmd/bear
-          go build .
+        run: go build ./cmd/bear
