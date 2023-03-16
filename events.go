@@ -13,8 +13,6 @@ func onMessageCreate(b *Bear) func(*discordgo.Session, *discordgo.MessageCreate)
 			return
 		}
 
-		b.Log.Debugf("Got message %#v.", m.Message)
-
 		msg := m.ContentWithMentionsReplaced()
 		caller := strings.Split(msg, " ")[0]
 
@@ -24,13 +22,10 @@ func onMessageCreate(b *Bear) func(*discordgo.Session, *discordgo.MessageCreate)
 		}
 
 		if b.Config.AutoDelete {
-			if err := session.ChannelMessageDelete(m.ChannelID, m.ID); err != nil {
-				b.Log.WithError(err).Debug("Error automatically deleting message.")
-			}
+			_ = session.ChannelMessageDelete(m.ChannelID, m.ID)
 		}
 
-		go cmd.GetHandler()(&Context{
-			Log:       b.Log,
+		go cmd.Handler(&Context{
 			Session:   b.Session,
 			Message:   m,
 			ChannelID: m.ChannelID,

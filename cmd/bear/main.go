@@ -8,35 +8,30 @@ import (
 	"github.com/omarhachach/bear"
 )
 
-type Module struct {
-	Name     string
-	Desc     string
-	Commands []bear.Command
-	Version  string
+type Module struct{}
+
+func (m *Module) Name() string {
+	return "Test"
 }
 
-func (m *Module) GetName() string {
-	return m.Name
+func (m *Module) Desc() string {
+	return "Test"
 }
 
-func (m *Module) GetDesc() string {
-	return m.Desc
+func (m *Module) Commands() []bear.Command {
+	return []bear.Command{}
 }
 
-func (m *Module) GetCommands() []bear.Command {
-	return m.Commands
+func (m *Module) Version() string {
+	return "v0.1.0"
 }
 
-func (m *Module) GetVersion() string {
-	return m.Version
+func (m *Module) Init(*bear.Bear) error {
+	return nil
 }
 
-func (m *Module) Init(*bear.Bear) {
-	return
-}
-
-func (m *Module) Close(*bear.Bear) {
-	return
+func (m *Module) Close(*bear.Bear) error {
+	return nil
 }
 
 func main() {
@@ -44,12 +39,12 @@ func main() {
 
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	b := bear.New(&bear.Config{
-		Log: &bear.LogConfig{
-			Debug: true,
-			File:  "",
-		},
 		DiscordToken: "your-token-goes-here",
-	}).RegisterModules(&Module{}).Start()
+	})
+
+	_ = b.RegisterModule(&Module{})
+
+	_ = b.Start()
 
 	<-c
 

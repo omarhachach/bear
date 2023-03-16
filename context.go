@@ -4,14 +4,12 @@ import (
 	"fmt"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/sirupsen/logrus"
 )
 
 // Context holds useful functions for a handler.
 type Context struct {
-	Log       *logrus.Logger
-	Session   *discordgo.Session
 	ChannelID string
+	Session   *discordgo.Session
 	Message   *discordgo.MessageCreate
 }
 

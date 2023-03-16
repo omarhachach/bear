@@ -1,2 +1,2 @@
 # bear
-A bot for Rexsdev.
+A simple bot framework.

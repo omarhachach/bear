@@ -1,27 +1,30 @@
 package bear
 
 import (
+	"errors"
 	"fmt"
-	"os"
 	"sync"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/sirupsen/logrus"
+)
+
+// The errors returned from Bear commands.
+var (
+	ErrModuleAlreadyExists  = errors.New("module does not have a unique name")
+	ErrCommandAlreadyExists = errors.New("command does not have a unique caller")
 )
 
 // Version is the current version of Bear.
-var Version = "0.3.1-alpha"
+var Version = "0.4.0-alpha"
 
 // Bear is the core bot.
 type Bear struct {
 	Commands map[string]Command
 	Modules  map[string]Module
 	Session  *discordgo.Session
-	Log      *logrus.Logger
 	Config   *Config
 	Version  string
 	mutex    *sync.Mutex
-	logFile  *os.File
 }
 
 // New returns a new Bear.
@@ -29,9 +32,7 @@ func New(config *Config) *Bear {
 	b := &Bear{
 		Commands: make(map[string]Command),
 		Modules:  make(map[string]Module),
-		Log:      logrus.New(),
 		mutex:    &sync.Mutex{},
-		logFile:  nil,
 		Version:  Version,
 	}
 
@@ -45,132 +46,98 @@ func (b *Bear) UpdateConfig(config *Config) *Bear {
 
 	b.Config = config
 
-	if b.Config.Log.Debug {
-		b.Log.SetLevel(logrus.DebugLevel)
-		b.Log.SetReportCaller(true)
-	}
-
-	if b.Config.Log.File == "" {
-		b.Log.SetOutput(os.Stdout)
-		return b
-	}
-
-	file, err := os.OpenFile(b.Config.Log.File, os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		b.Log.WithError(err).Error("Error opening log file, not changing log location.")
-	} else {
-		b.logFile = file
-		b.Log.SetOutput(file)
-	}
-
 	return b
 }
 
 // RegisterModules will register all of the modules passed to this function.
-func (b *Bear) RegisterModules(modules ...Module) *Bear {
+func (b *Bear) RegisterModules(modules ...Module) error {
+	var errs []error
 	for _, module := range modules {
-		b.RegisterModule(module)
+		err := b.RegisterModule(module)
+		if err != nil {
+			errs = append(errs, err)
+		}
 	}
 
-	return b
+	return errors.Join(errs...)
 }
 
 // RegisterModule with register a module to the bot.
-func (b *Bear) RegisterModule(module Module) *Bear {
-	b.mutex.Lock()
-
-	_, exists := b.Modules[module.GetName()]
-
-	if exists {
-		b.Log.Errorf("Failed to load module %s, module already exists.", module.GetName())
-		b.mutex.Unlock()
-		return b
-	}
-
-	b.Modules[module.GetName()] = module
-	b.Log.Infof("Registered module %s.", module.GetName())
-	b.mutex.Unlock()
-
-	b.RegisterCommands(module.GetCommands())
-
-	return b
-}
-
-// RegisterCommands will register an array of commands to the bot.
-func (b *Bear) RegisterCommands(cmds []Command) *Bear {
-	for _, cmd := range cmds {
-		b.RegisterCommand(cmd)
-	}
-
-	return b
-}
-
-// RegisterCommand will check if a command exists, and add it to the bot.
-func (b *Bear) RegisterCommand(cmd Command) *Bear {
+func (b *Bear) RegisterModule(module Module) error {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
-	for _, caller := range cmd.GetCallers() {
+	_, exists := b.Modules[module.Name()]
+
+	if exists {
+		return fmt.Errorf("module with name %s alreayd exists: %w", module.Name(), ErrModuleAlreadyExists)
+	}
+
+	b.Modules[module.Name()] = module
+
+	return b.RegisterCommands(module.Commands())
+}
+
+// RegisterCommands will register an array of commands to the bot.
+func (b *Bear) RegisterCommands(cmds []Command) error {
+	var errs []error
+	for _, cmd := range cmds {
+		err := b.RegisterCommand(cmd)
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	return errors.Join(errs...)
+}
+
+// RegisterCommand will check if a command exists, and add it to the bot.
+func (b *Bear) RegisterCommand(cmd Command) error {
+	var errs []error
+
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
+	for _, caller := range cmd.Callers() {
 		_, exists := b.Commands[caller]
 
 		if exists {
-			b.Log.Errorf("Couldn't register caller %s, skipping.", caller)
+			errs = append(errs, fmt.Errorf("could not register command %s: %w", caller, ErrCommandAlreadyExists))
 			continue
 		}
 
 		b.Commands[caller] = cmd
-		b.Log.Debugf("Registered caller %s.", caller)
 	}
 
-	return b
+	return errors.Join(errs...)
 }
 
 // AddHandler will add a handler to the Discord session
-func (b *Bear) AddHandler(handler interface{}) *Bear {
-	b.Log.Debug("Added event handler to the session")
+func (b *Bear) AddHandler(handler interface{}) {
 	b.Session.AddHandler(handler)
-	return b
 }
 
 // Start will open the Discord session, and initialize the bot.
-func (b *Bear) Start() *Bear {
+func (b *Bear) Start() error {
 	session, err := initDiscordSession(b.Config.DiscordToken)
 	if err != nil {
-		b.Log.WithError(err).Fatal("Couldn't establish Discord session.")
-		return b
+		return fmt.Errorf("could not start discord session: %w", err)
 	}
 
 	b.Session = session
 	b.AddHandler(onMessageCreate(b))
 
-	b.Log.Info("Initing modules.")
-	b.initModules()
-
-	b.Log.Info("You have poked the bear!")
-	return b
+	return b.initModules()
 }
 
-// CLose will close all the sessions properly.
-func (b *Bear) Close() *Bear {
-	b.Log.Info("The bear is sleepy.")
-
+// Close will close all the sessions properly.
+func (b *Bear) Close() error {
 	err := b.Session.Close()
 	if err != nil {
-		b.Log.WithError(err).Error("Error closing Discord session.")
+		return fmt.Errorf("could not close discord session: %w", err)
 	}
 
-	if b.logFile != nil {
-		err = b.logFile.Close()
-		if err != nil {
-			b.Log.WithError(err).Error("Error closing log file.")
-		}
-	}
-
-	b.Log.Debug("Closing all modules.")
-	b.closeModules()
-
-	b.Log.Info("The bear is now asleep.")
-	return b
+	return b.closeModules()
 }
 
 func initDiscordSession(token string) (*discordgo.Session, error) {
@@ -187,16 +154,18 @@ func initDiscordSession(token string) (*discordgo.Session, error) {
 	return session, nil
 }
 
-func (b *Bear) initModules() {
+func (b *Bear) initModules() error {
+	var errs []error
 	for _, module := range b.Modules {
-		module.Init(b)
-		b.Log.Debugf("Initialized module: %s", module.GetName())
+		errs = append(errs, module.Init(b))
 	}
+	return errors.Join(errs...)
 }
 
-func (b *Bear) closeModules() {
+func (b *Bear) closeModules() error {
+	var errs []error
 	for _, module := range b.Modules {
-		module.Init(b)
-		b.Log.Debugf("Closed module: %s", module.GetName())
+		errs = append(errs, module.Close(b))
 	}
+	return errors.Join(errs...)
 }

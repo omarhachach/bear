@@ -1,11 +1,11 @@
 module github.com/omarhachach/bear
 
-go 1.13
+go 1.20
+
+require github.com/bwmarrin/discordgo v0.27.1
 
 require (
-	github.com/bwmarrin/discordgo v0.20.2
-	github.com/gorilla/websocket v1.4.1 // indirect
-	github.com/sirupsen/logrus v1.4.2
-	golang.org/x/crypto v0.0.0-20200204104054-c9f3fb736b72 // indirect
-	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5 // indirect
+	github.com/gorilla/websocket v1.5.0 // indirect
+	golang.org/x/crypto v0.7.0 // indirect
+	golang.org/x/sys v0.6.0 // indirect
 )
